@@ -18,6 +18,8 @@ func main() {
 			return
 		}
 
+		lower, upper := 15, 30
+
 		for employee := 0; employee < k; employee++ {
 			var sign string
 			var temperature int
@@ -25,6 +27,26 @@ func main() {
 			if _, err := fmt.Scan(&sign, &temperature); err != nil {
 				fmt.Println("Error reading temperature requirement")
 				return
+			}
+
+			switch sign {
+			case ">=":
+				if temperature > lower {
+					lower = temperature
+				}
+			case "<=":
+				if temperature < upper {
+					upper = temperature
+				}
+			default:
+				fmt.Println("Incorrect input data format")
+				return
+			}
+
+			if lower <= upper {
+				fmt.Println(lower)
+			} else {
+				fmt.Println(-1)
 			}
 		}
 	}
