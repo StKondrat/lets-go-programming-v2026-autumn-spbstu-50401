@@ -3,29 +3,34 @@ package main
 import "fmt"
 
 func main() {
-	var n int
+	var departmentsCount int
 
-	if _, err := fmt.Scan(&n); err != nil {
+	if _, err := fmt.Scan(&departmentsCount); err != nil {
 		fmt.Println("Error reading department count")
+
 		return
 	}
 
-	for department := 0; department < n; department++ {
-		var k int
+	for range departmentsCount {
+		var employeesCount int
 
-		if _, err := fmt.Scan(&k); err != nil {
+		if _, err := fmt.Scan(&employeesCount); err != nil {
 			fmt.Println("Error reading employee count")
+
 			return
 		}
 
 		lower, upper := 15, 30
 
-		for employee := 0; employee < k; employee++ {
-			var sign string
-			var temperature int
+		for range employeesCount {
+			var (
+				sign        string
+				temperature int
+			)
 
 			if _, err := fmt.Scan(&sign, &temperature); err != nil {
 				fmt.Println("Error reading temperature requirement")
+
 				return
 			}
 
@@ -40,6 +45,7 @@ func main() {
 				}
 			default:
 				fmt.Println("Incorrect input data format")
+
 				return
 			}
 
