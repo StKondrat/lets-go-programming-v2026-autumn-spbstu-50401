@@ -6,7 +6,7 @@ func main() {
 	var departmentsCount int
 
 	if _, err := fmt.Scan(&departmentsCount); err != nil {
-		fmt.Println("Error reading department count")
+		fmt.Println("Error reading department count:", err)
 
 		return
 	}
@@ -15,7 +15,7 @@ func main() {
 		var employeesCount int
 
 		if _, err := fmt.Scan(&employeesCount); err != nil {
-			fmt.Println("Error reading employee count")
+			fmt.Println("Error reading employee count:", err)
 
 			return
 		}
@@ -29,7 +29,7 @@ func main() {
 			)
 
 			if _, err := fmt.Scan(&sign, &temperature); err != nil {
-				fmt.Println("Error reading temperature requirement")
+				fmt.Println("Error reading temperature requirement:", err)
 
 				return
 			}
@@ -44,7 +44,7 @@ func main() {
 					upper = temperature
 				}
 			default:
-				fmt.Println("Incorrect input data format")
+				fmt.Printf("Incorrect input data format: unknown operator %q\n", sign)
 
 				return
 			}
