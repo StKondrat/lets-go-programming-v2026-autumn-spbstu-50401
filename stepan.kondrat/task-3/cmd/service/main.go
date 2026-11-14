@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"encoding/xml"
+	"errors"
 	"flag"
 	"fmt"
 	"os"
@@ -15,6 +16,8 @@ import (
 	"go.yaml.in/yaml/v3"
 	"golang.org/x/net/html/charset"
 )
+
+var ErrInvalidConfig = errors.New("configuration must contain non-empty input-file and output-file")
 
 type Config struct {
 	InputFile  string `yaml:"input-file"`
@@ -40,39 +43,67 @@ type CurrencyResult struct {
 
 func main() {
 	configPath := flag.String("config", "", "Path to YAML configuration")
+
 	flag.Parse()
 
 	if *configPath == "" {
 		panic("configuration path is required: use --config")
 	}
 
-	data, err := os.ReadFile(*configPath)
+	config, err := loadConfig(*configPath)
 	if err != nil {
-		panic(fmt.Errorf("reading configuration: %w", err))
+		panic(err)
 	}
 
+	currencies, err := loadCurrencies(config.InputFile)
+	if err != nil {
+		panic(err)
+	}
+
+	sort.SliceStable(currencies, func(i, j int) bool {
+		return currencies[i].Value > currencies[j].Value
+	})
+
+	err = saveCurrencies(config.OutputFile, currencies)
+	if err != nil {
+		panic(err)
+	}
+}
+
+func loadConfig(path string) (Config, error) {
 	var config Config
 
-	if err := yaml.Unmarshal(data, &config); err != nil {
-		panic(fmt.Errorf("decoding configuration: %w", err))
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return config, fmt.Errorf("reading configuration: %w", err)
+	}
+
+	err = yaml.Unmarshal(data, &config)
+	if err != nil {
+		return config, fmt.Errorf("decoding configuration: %w", err)
 	}
 
 	if config.InputFile == "" || config.OutputFile == "" {
-		panic("configuration must contain non-empty input-file and output-file")
+		return config, ErrInvalidConfig
 	}
 
-	xmlData, err := os.ReadFile(config.InputFile)
+	return config, nil
+}
+
+func loadCurrencies(path string) ([]CurrencyResult, error) {
+	data, err := os.ReadFile(path)
 	if err != nil {
-		panic(fmt.Errorf("reading XML file: %w", err))
+		return nil, fmt.Errorf("reading XML file: %w", err)
 	}
 
-	decoder := xml.NewDecoder(bytes.NewReader(xmlData))
+	decoder := xml.NewDecoder(bytes.NewReader(data))
 	decoder.CharsetReader = charset.NewReaderLabel
 
 	var rates CurrencyRates
 
-	if err := decoder.Decode(&rates); err != nil {
-		panic(fmt.Errorf("decoding XML: %w", err))
+	err = decoder.Decode(&rates)
+	if err != nil {
+		return nil, fmt.Errorf("decoding XML: %w", err)
 	}
 
 	results := make([]CurrencyResult, 0, len(rates.Currencies))
@@ -82,11 +113,11 @@ func main() {
 
 		value, err := strconv.ParseFloat(valueText, 64)
 		if err != nil {
-			panic(fmt.Errorf(
+			return nil, fmt.Errorf(
 				"parsing value for currency %q: %w",
 				currency.CharCode,
 				err,
-			))
+			)
 		}
 
 		results = append(results, CurrencyResult{
@@ -96,22 +127,24 @@ func main() {
 		})
 	}
 
-	sort.SliceStable(results, func(i, j int) bool {
-		return results[i].Value > results[j].Value
-	})
+	return results, nil
+}
 
-	jsonData, err := json.MarshalIndent(results, "", "    ")
+func saveCurrencies(path string, currencies []CurrencyResult) error {
+	data, err := json.MarshalIndent(currencies, "", "    ")
 	if err != nil {
-		panic(fmt.Errorf("encoding currencies as JSON: %w", err))
+		return fmt.Errorf("encoding currencies as JSON: %w", err)
 	}
 
-	outputDir := filepath.Dir(config.OutputFile)
-
-	if err := os.MkdirAll(outputDir, 0o755); err != nil {
-		panic(fmt.Errorf("creating output directory: %w", err))
+	err = os.MkdirAll(filepath.Dir(path), 0o750)
+	if err != nil {
+		return fmt.Errorf("creating output directory: %w", err)
 	}
 
-	if err := os.WriteFile(config.OutputFile, jsonData, 0o644); err != nil {
-		panic(fmt.Errorf("writing JSON file: %w", err))
+	err = os.WriteFile(path, data, 0o600)
+	if err != nil {
+		return fmt.Errorf("writing JSON file: %w", err)
 	}
+
+	return nil
 }
