@@ -6,6 +6,9 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"sort"
+	"strconv"
+	"strings"
 
 	"go.yaml.in/yaml/v3"
 	"golang.org/x/net/html/charset"
@@ -25,6 +28,12 @@ type Currency struct {
 type CurrencyRates struct {
 	XMLName    xml.Name   `xml:"ValCurs"`
 	Currencies []Currency `xml:"Valute"`
+}
+
+type CurrencyResult struct {
+	NumCode  int     `json:"num_code"`
+	CharCode string  `json:"char_code"`
+	Value    float64 `json:"value"`
 }
 
 func main() {
@@ -62,5 +71,34 @@ func main() {
 
 	if err := decoder.Decode(&rates); err != nil {
 		panic(fmt.Errorf("decoding XML: %w", err))
+	}
+
+	results := make([]CurrencyResult, 0, len(rates.Currencies))
+
+	for _, currency := range rates.Currencies {
+		valueText := strings.ReplaceAll(currency.Value, ",", ".")
+
+		value, err := strconv.ParseFloat(valueText, 64)
+		if err != nil {
+			panic(fmt.Errorf(
+				"parsing value for currency %q: %w",
+				currency.CharCode,
+				err,
+			))
+		}
+
+		results = append(results, CurrencyResult{
+			NumCode:  currency.NumCode,
+			CharCode: currency.CharCode,
+			Value:    value,
+		})
+	}
+
+	sort.SliceStable(results, func(i, j int) bool {
+		return results[i].Value > results[j].Value
+	})
+
+	for _, currency := range results {
+		fmt.Println(currency.CharCode, currency.Value)
 	}
 }
