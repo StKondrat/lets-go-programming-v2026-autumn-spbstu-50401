@@ -17,6 +17,11 @@ import (
 	"golang.org/x/net/html/charset"
 )
 
+const (
+	dirPermissions  = 0o750
+	filePermissions = 0o600
+)
+
 var ErrInvalidConfig = errors.New("configuration must contain non-empty input-file and output-file")
 
 type Config struct {
@@ -136,12 +141,12 @@ func saveCurrencies(path string, currencies []CurrencyResult) error {
 		return fmt.Errorf("encoding currencies as JSON: %w", err)
 	}
 
-	err = os.MkdirAll(filepath.Dir(path), 0o750)
+	err = os.MkdirAll(filepath.Dir(path), dirPermissions)
 	if err != nil {
 		return fmt.Errorf("creating output directory: %w", err)
 	}
 
-	err = os.WriteFile(path, data, 0o600)
+	err = os.WriteFile(path, data, filePermissions)
 	if err != nil {
 		return fmt.Errorf("writing JSON file: %w", err)
 	}
