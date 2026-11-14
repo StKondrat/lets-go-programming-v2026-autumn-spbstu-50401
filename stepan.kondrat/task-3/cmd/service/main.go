@@ -1,16 +1,30 @@
 package main
 
 import (
+	"bytes"
+	"encoding/xml"
 	"flag"
 	"fmt"
 	"os"
 
 	"go.yaml.in/yaml/v3"
+	"golang.org/x/net/html/charset"
 )
 
 type Config struct {
 	InputFile  string `yaml:"input-file"`
 	OutputFile string `yaml:"output-file"`
+}
+
+type Currency struct {
+	NumCode  int    `xml:"NumCode"`
+	CharCode string `xml:"CharCode"`
+	Value    string `xml:"Value"`
+}
+
+type CurrencyRates struct {
+	XMLName    xml.Name   `xml:"ValCurs"`
+	Currencies []Currency `xml:"Valute"`
 }
 
 func main() {
@@ -36,6 +50,17 @@ func main() {
 		panic("configuration must contain non-empty input-file and output-file")
 	}
 
-	fmt.Println("Input file:", config.InputFile)
-	fmt.Println("Output file:", config.OutputFile)
+	xmlData, err := os.ReadFile(config.InputFile)
+	if err != nil {
+		panic(fmt.Errorf("reading XML file: %w", err))
+	}
+
+	decoder := xml.NewDecoder(bytes.NewReader(xmlData))
+	decoder.CharsetReader = charset.NewReaderLabel
+
+	var rates CurrencyRates
+
+	if err := decoder.Decode(&rates); err != nil {
+		panic(fmt.Errorf("decoding XML: %w", err))
+	}
 }
