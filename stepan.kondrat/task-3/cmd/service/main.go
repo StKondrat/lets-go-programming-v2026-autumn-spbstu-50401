@@ -2,10 +2,12 @@ package main
 
 import (
 	"bytes"
+	"encoding/json"
 	"encoding/xml"
 	"flag"
 	"fmt"
 	"os"
+	"path/filepath"
 	"sort"
 	"strconv"
 	"strings"
@@ -98,7 +100,18 @@ func main() {
 		return results[i].Value > results[j].Value
 	})
 
-	for _, currency := range results {
-		fmt.Println(currency.CharCode, currency.Value)
+	jsonData, err := json.MarshalIndent(results, "", "    ")
+	if err != nil {
+		panic(fmt.Errorf("encoding currencies as JSON: %w", err))
+	}
+
+	outputDir := filepath.Dir(config.OutputFile)
+
+	if err := os.MkdirAll(outputDir, 0o755); err != nil {
+		panic(fmt.Errorf("creating output directory: %w", err))
+	}
+
+	if err := os.WriteFile(config.OutputFile, jsonData, 0o644); err != nil {
+		panic(fmt.Errorf("writing JSON file: %w", err))
 	}
 }
